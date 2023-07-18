@@ -1,0 +1,13 @@
+version: "3.4"
+
+services:
+  python:
+    container_name: "python"
+    volumes:
+      - ..:/project
+    env_file:
+      - .env
+    build:
+      context: ../
+      dockerfile: ./environments/Dockerfile_python
+    tty: true

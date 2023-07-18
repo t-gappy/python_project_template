@@ -1,0 +1,71 @@
+FROM ubuntu:18.04
+
+# change default shell.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN chsh -s /bin/bash
+
+# set environment variables and some variables for installing.
+ENV PYTHONIOENCODING=utf-8 \
+    PYTHON_VERSION=3.10.10 \
+    RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/python/bin/:/usr/local/cargo/bin:/root/.local/bin:$PATH \
+    RUST_VERSION=1.65.0 \
+    LC_ALL=C.UTF-8 \
+    LANG=C.UTF-8 \
+    TZ=Asia/Tokyo \
+    DEBIAN_FRONTEND=noninteractive
+
+ARG PYTHON_REQUIREMENTS='build-essential libreadline-dev libncursesw5-dev libssl-dev libsqlite3-dev libgdbm-dev libbz2-dev liblzma-dev zlib1g-dev uuid-dev libffi-dev libdb-dev tk-dev libgl1-mesa-dev' \
+    INSTALL_PACKAGES='make wget curl gcc g++ unzip git openssl ca-certificates'
+
+# install python
+RUN echo $TZ > /etc/timezone \
+    && apt-get update -y \
+    && apt-get install -y --no-install-recommends $INSTALL_PACKAGES $PYTHON_REQUIREMENTS \
+    && wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz \
+    && tar xzvf Python-${PYTHON_VERSION}.tgz \
+    && cd Python-${PYTHON_VERSION} \
+    && ./configure --prefix=/usr/local/python --with-ensurepip \
+    && make \
+    && make install \
+    && PYTHON_VERSION_MAJOR=$(echo ${PYTHON_VERSION} | awk -F '.' -v 'OFS=.' '{print $1,$2}') \
+    && ln -s /usr/local/python/bin/python${PYTHON_VERSION_MAJOR} /bin/python \
+    && ln -s /usr/local/python/bin/pip${PYTHON_VERSION_MAJOR} /bin/pip \
+    && apt-get autoremove -y \
+    && apt-get clean -y\
+    && rm -rf /var/lib/apt/lists/*
+
+# install rust compiler for ginza
+RUN set -eux; \
+    dpkgArch="$(dpkg --print-architecture)"; \
+    case "${dpkgArch##*-}" in \
+    amd64) rustArch='x86_64-unknown-linux-gnu'; rustupSha256='5cc9ffd1026e82e7fb2eec2121ad71f4b0f044e88bca39207b3f6b769aaa799c' ;; \
+    armhf) rustArch='armv7-unknown-linux-gnueabihf'; rustupSha256='48c5ecfd1409da93164af20cf4ac2c6f00688b15eb6ba65047f654060c844d85' ;; \
+    arm64) rustArch='aarch64-unknown-linux-gnu'; rustupSha256='e189948e396d47254103a49c987e7fb0e5dd8e34b200aa4481ecc4b8e41fb929' ;; \
+    i386) rustArch='i686-unknown-linux-gnu'; rustupSha256='0e0be29c560ad958ba52fcf06b3ea04435cb3cd674fbe11ce7d954093b9504fd' ;; \
+    *) echo >&2 "unsupported architecture: ${dpkgArch}"; exit 1 ;; \
+    esac; \
+    url="https://static.rust-lang.org/rustup/archive/1.25.1/${rustArch}/rustup-init"; \
+    wget "$url"; \
+    echo "${rustupSha256} *rustup-init" | sha256sum -c -; \
+    chmod +x rustup-init; \
+    ./rustup-init -y --no-modify-path --profile minimal --default-toolchain $RUST_VERSION --default-host ${rustArch}; \
+    rm rustup-init; \
+    chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
+    rustup --version; \
+    cargo --version; \
+    rustc --version;
+
+# install poetry
+RUN PYTHON_VERSION_MAJOR=$(echo ${PYTHON_VERSION} | awk -F '.' -v 'OFS=.' '{print $1,$2}') \
+    && curl -sSL https://install.python-poetry.org | python${PYTHON_VERSION_MAJOR} - \
+    && export PATH="/root/.local/bin:$PATH" \
+    && poetry config virtualenvs.in-project true \
+    && echo "export PATH='/root/.local/bin:$PATH'" >> $HOMEDIR/.bashrc
+
+WORKDIR /project
+COPY ../ ./
+
+ENV DEBIAN_FRONTEND=
+CMD ["/bin/bash"]

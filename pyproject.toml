@@ -1,0 +1,57 @@
+[tool.poetry]
+name = "new-project"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+# packages = [{include = "new_project"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
+isort = "^5.12.0"
+flake8 = "^6.0.0"
+pyproject-flake8 = "^6.0.0.post1"
+flake8-bugbear = "^23.5.9"
+flake8-docstrings = "^1.7.0"
+darglint = "^1.8.1"
+nbqa = "^1.7.0"
+pytest = "^7.3.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+main = "new-project.main:main"
+
+[tool.black]
+line-length = 120
+
+[tool.flake8]
+select = "B, B9, D, DAR, E, F, W"
+format = "%(path)s: L%(row)d: [%(code)s] %(text)s"
+max-line-length = 120
+docstring-convention = "google"
+strictness = "short"
+per-file-ignores = "tests/*:D, DAR"
+ignore = "E203, E501, E722, D100, D101, D102, D103, D104, D202, D107, D415, W503"
+# E203: Whitespace before ':'
+# E501: Line too long (82 > 79 characters)
+# E722: Do not use bare except'
+# D100: Missing docstring in public module
+# D101: Missing docstring in public class
+# D102: Missing docstring in public method
+# D103: Missing docstring in public function
+# D104: Missing docstring in public package
+# D202: No blank lines allowed after function docstring
+# D415: First line should end with a period, question mark, or exclamation point
+# W503: Line break occurred before a binary operator
+
+[tool.isort]
+profile = "black"
+line_length = 120
+multi_line_output = 3
+include_trailing_comma = true
